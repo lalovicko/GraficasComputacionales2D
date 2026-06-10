@@ -9,6 +9,8 @@
 #include <fstream>
 #include <unordered_map>
 #include <memory>
+#include <utility>
+#include <queue>
 
 #include <SFML/Graphics.hpp>
 

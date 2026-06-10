@@ -2,17 +2,14 @@
 #include "Core/Window.h"
 #include "Core/CShape.h"
 
-Window* g_window = nullptr;
+std::unique_ptr<Window> g_window = nullptr;
+
 CShape Circle(ShapeType::CIRCLE);
 CShape line(ShapeType::LINE);
-void destroy()
-{
-	SAFE_PTR_RELEASE(g_window);
-}
 int main()
 {
     // create the window
-	g_window = new Window(800, 600, "My window");
+	g_window = std::make_unique<Window>(800, 600, "My window");
     //sf::RenderWindow window(sf::VideoMode({ 800, 600 }), "My window");
     // set the shape color to green
 	Circle.getShape()->setFillColor(sf::Color(100,250,50));
