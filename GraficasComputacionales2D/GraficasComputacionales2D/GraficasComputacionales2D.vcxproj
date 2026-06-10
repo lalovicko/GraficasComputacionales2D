@@ -165,7 +165,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="source\Core\CShape.cpp" />
+    <ClCompile Include="source\Core\Window.cpp" />
     <ClCompile Include="Source\Main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\Core\CShape.h" />
+    <ClInclude Include="include\Core\Window.h" />
+    <ClInclude Include="include\Prerequisitesr.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
