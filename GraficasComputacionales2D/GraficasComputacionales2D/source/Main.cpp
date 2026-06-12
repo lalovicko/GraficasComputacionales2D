@@ -6,8 +6,7 @@ std::unique_ptr<Window> g_window = nullptr;
 
 CShape Circle(ShapeType::CIRCLE);
 CShape line(ShapeType::LINE);
-int main()
-{
+int main(){
     // create the window
 	g_window = std::make_unique<Window>(800, 600, "My window");
     //sf::RenderWindow window(sf::VideoMode({ 800, 600 }), "My window");
