@@ -1,81 +1,95 @@
 #include "Core/Window.h"
 
 Window::Window(int width, int height, const std::string& title) {
-	m_window = new sf::RenderWindow(sf::VideoMode({ static_cast<unsigned int>(width), 
-		                                            static_cast<unsigned int>(height) }), 
-		                                            title,
-		                                            sf::Style::Default);
+    m_window = std::make_unique<sf::RenderWindow>(
+        sf::VideoMode({ static_cast<unsigned int>(width),
+                        static_cast<unsigned int>(height) }),
+        title,
+        sf::Style::Default
+    );
 
-	if (m_window) {
-		m_window->setFramerateLimit(60);
-		MESSAGE("Window", "Window", "Window created succesfully");
-	}
-	else {
-		ERROR("Window", "Window", "Failed to create window"); 
-	}
-}
-Window::~Window() {
-	SAFE_PTR_RELEASE(m_window);
-}
+    if (!m_window) {
+        ERROR("Window", "Window", "Failed to create window");
+    }
 
- bool
- Window::isOpen() const {
-	if (m_window) {
-		return m_window && m_window->isOpen();
-	}
-	else {
-		ERROR("Window", "isOpen", "Window is not initialized");
-		return false;
-	}
+    m_window->setFramerateLimit(60);
+    handleResize(m_window->getSize());
+    MESSAGE("Window", "Window", "Window created successfully");
 }
 
- void
- Window::clear(const sf::Color& color) {
-	if (m_window) {
-		m_window->clear(color);
-	}
-	else {
-		ERROR("Window", "clear", "Window is null");
-	}
- }
- void Window::draw(const sf::Drawable& drawable, const sf::RenderStates& states) {
-	 if (m_window) {
-		m_window->draw(drawable, states);
-	}
-	else {
-		ERROR("Window", "draw", "Window is null");
-	}
- }
+bool Window::isOpen() const {
+    if (!m_window) {
+        return false;
+    }
+    return m_window->isOpen();
+}
 
- void 
- Window::display() {
-	 if (m_window) {
-		m_window->display();
-	}
-	else {
-		ERROR("Window", "display", "Window is null");
-	}
- }
- void 
- Window::close() {
-	 	 if (m_window) {
-		m_window->close();
-	}
-	else {
-		ERROR("Window", "close", "Window is null");
-		 }
- }
+void Window::clear(const sf::Color& color) {
+    if (!m_window) {
+        ERROR("Window", "clear", "Window is null");
+    }
+    m_window->clear(color);
+}
 
- void 
- Window::update() {
-	 deltaTime = clock.restart();
- }
+void Window::draw(const sf::Drawable& drawable, const sf::RenderStates& states) {
+    if (!m_window) {
+        ERROR("Window", "draw", "Window is null");
+    }
+    m_window->draw(drawable, states);
+}
 
- void 
- Window::render() {
+void Window::display() {
+    if (!m_window) {
+        ERROR("Window", "display", "Window is null");
+    }
+    m_window->display();
+}
 
- }
+void Window::close() {
+    if (m_window) {
+        m_window->close();
+    }
+}
 
- void Window::destroy() {
-	 SAFE_PTR_RELEASE(m_window);
- }
+void Window::handleResize(const sf::Vector2u& size) {
+    if (!m_window || size.x == 0 || size.y == 0) {
+        return;
+    }
+
+    m_baseViewSize = {
+        static_cast<float>(size.x),
+        static_cast<float>(size.y)
+    };
+
+    m_view.setSize(m_baseViewSize);
+    m_view.setCenter({ 0.f, 0.f });
+    m_window->setView(m_view);
+}
+
+void Window::applyCameraView(const sf::Vector2f& center,
+                             float zoom,
+                             float rotationDegrees) {
+    if (!m_window) {
+        return;
+    }
+
+    if (zoom <= 0.f) {
+        zoom = 1.f;
+    }
+
+    m_view.setSize(m_baseViewSize / zoom);
+    m_view.setCenter(center);
+    m_view.setRotation(sf::degrees(rotationDegrees));
+    m_window->setView(m_view);
+}
+
+void Window::update() {
+    m_deltaTime = m_clock.restart();
+}
+
+void Window::render() {
+}
+
+void Window::destroy() {
+    m_window.reset();
+}

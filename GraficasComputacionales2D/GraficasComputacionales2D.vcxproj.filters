@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <ItemGroup>
     <Filter Include="Source Files">
@@ -83,23 +83,11 @@
     <ClInclude Include="include\ECS\Systems\UISystem.h">
       <Filter>Header Files\ECS\Systems</Filter>
     </ClInclude>
-    <ClInclude Include="include\Prerequisitesr.h">
+    <ClInclude Include="include\Prerequisites.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\ECS\Components\Movement.h">
-      <Filter>Header Files\ECS\Components</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\ECS\Components\SteeringBehavior.h">
-      <Filter>Header Files\ECS\Components</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\ECS\Systems\SteeringSystem.h">
-      <Filter>Header Files\ECS\Systems</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ECS\Components\InspectorName.h">
-      <Filter>Header Files\ECS\Components</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ECS\Systems\SimpleInspectorSystem.h">
-      <Filter>Header Files\ECS\Systems</Filter>
+    <ClInclude Include="include\Prerequisitesr.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,29 +1,23 @@
 #pragma once
+
 #include "Prerequisitesr.h"
 
 class Window;
 
 class CShape {
 public:
-
     CShape() = default;
-
-    explicit CShape(ShapeType shapeType); 
-
+    explicit CShape(ShapeType shapeType);
     ~CShape() = default;
-    
-    void 
-    draw(Window& window);
-   
-    sf::Shape* 
-    getShape();
+
+    void draw(Window& window);
+    [[nodiscard]] sf::Shape* getShape() noexcept;
+    [[nodiscard]] const sf::Shape* getShape() const noexcept;
 
 private:
-
-    std::unique_ptr<sf::Shape> 
-    createShape(ShapeType shapeType);
+    [[nodiscard]] std::unique_ptr<sf::Shape> createShape(ShapeType shapeType);
 
 private:
-    std::unique_ptr<sf::Shape> m_shape = nullptr;
-    ShapeType m_ShapeType;
+    std::unique_ptr<sf::Shape> m_shape;
+    ShapeType m_shapeType{ EMPTY };
 };

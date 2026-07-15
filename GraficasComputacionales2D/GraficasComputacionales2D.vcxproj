@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -170,17 +170,12 @@
     <ClCompile Include="source\Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\ECS\Components\Movement.h" />
-    <ClInclude Include="..\include\ECS\Components\SteeringBehavior.h" />
-    <ClInclude Include="..\include\ECS\Systems\SteeringSystem.h" />
     <ClInclude Include="include\Core\CShape.h" />
     <ClInclude Include="include\Core\Window.h" />
     <ClInclude Include="include\ECS\ComponentPool.h" />
-    <ClInclude Include="include\ECS\Components\InspectorName.h" />
     <ClInclude Include="include\ECS\Registry.h" />
     <ClInclude Include="include\ECS\SparseSet.h" />
     <ClInclude Include="include\ECS\System.h" />
-    <ClInclude Include="include\ECS\Systems\SimpleInspectorSystem.h" />
     <ClInclude Include="include\ECS\Types.h" />
     <ClInclude Include="include\ECS\View.h" />
     <ClInclude Include="include\ECS\Components\Camera.h" />
@@ -189,6 +184,7 @@
     <ClInclude Include="include\ECS\Systems\CameraSystem.h" />
     <ClInclude Include="include\ECS\Systems\RenderSystem.h" />
     <ClInclude Include="include\ECS\Systems\UISystem.h" />
+    <ClInclude Include="include\Prerequisites.h" />
     <ClInclude Include="include\Prerequisitesr.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
