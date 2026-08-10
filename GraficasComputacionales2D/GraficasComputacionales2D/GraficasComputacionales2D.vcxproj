@@ -177,9 +177,11 @@
     <ClInclude Include="include\Core\Window.h" />
     <ClInclude Include="include\ECS\ComponentPool.h" />
     <ClInclude Include="include\ECS\Components\InspectorName.h" />
+    <ClInclude Include="include\ECS\Components\Path.h" />
     <ClInclude Include="include\ECS\Registry.h" />
     <ClInclude Include="include\ECS\SparseSet.h" />
     <ClInclude Include="include\ECS\System.h" />
+    <ClInclude Include="include\ECS\Systems\PathRenderSystem.h" />
     <ClInclude Include="include\ECS\Systems\SimpleInspectorSystem.h" />
     <ClInclude Include="include\ECS\Types.h" />
     <ClInclude Include="include\ECS\View.h" />

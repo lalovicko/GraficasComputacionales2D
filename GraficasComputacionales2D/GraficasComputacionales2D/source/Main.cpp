@@ -16,7 +16,8 @@
 
 #include "Prerequisitesr.h"
 #include "Core/Window.h"
-
+#include "ECS/Components/Path.h"
+#include "ECS/Systems/PathRenderSystem.h"
 #include "ECS/Registry.h"
 
  // Componentes
@@ -54,6 +55,14 @@ int main()
     // el Inspector se registra al final para dibujarse encima de todo lo demas.
     registry.AddSystem<ECS::SteeringSystem>();
     registry.AddSystem<ECS::CameraSystem>(window);
+    registry.AddSystem<ECS::SteeringSystem>();
+    registry.AddSystem<ECS::CameraSystem>(window);
+
+    // La pista se dibuja antes que los agentes.
+    registry.AddSystem<ECS::PathRenderSystem>(window);
+
+    registry.AddSystem<ECS::RenderSystem>(window);
+    registry.AddSystem<ECS::SimpleInspectorSystem>(window);
     registry.AddSystem<ECS::RenderSystem>(window);
     registry.AddSystem<ECS::SimpleInspectorSystem>(window);
 
@@ -72,9 +81,8 @@ int main()
 
     registry.AddComponent<ECS::Transform>(
         player,
-        sf::Vector2f{ 0.f, 0.f }
+        sf::Vector2f{ -330.f, -120.f }
     );
-
     registry.AddComponent<ECS::Render>(
         player,
         ECS::Render::Make(
@@ -224,6 +232,30 @@ int main()
     // --- Bucle principal ---
     while (window.isOpen())
     {
+        const ECS::EntityID trackEntity =
+            registry.CreateEntity();
+
+        ECS::Path& track =
+            registry.AddComponent<ECS::Path>(
+                trackEntity
+            );
+
+        track.radius = 55.f;
+        track.closed = true;
+
+        track.points =
+        {
+            { -330.f, -120.f },
+            { -250.f, -230.f },
+            {  20.f,  -260.f },
+            {  280.f, -210.f },
+            {  370.f,  -40.f },
+            {  330.f,  150.f },
+            {  140.f,  250.f },
+            { -120.f,  250.f },
+            { -320.f,  150.f },
+            { -390.f,   10.f }
+        };
         // Procesamiento de eventos de la ventana (cierre, resize, etc.).
         while (
             const auto event =
