@@ -34,7 +34,8 @@ namespace ECS {
          */
         explicit Render(std::shared_ptr<sf::Shape> drawable,
             sf::Color color = sf::Color::White) noexcept
-            : shape(std::move(drawable)), fillColor(color) {}
+            : shape(std::move(drawable)), fillColor(color) {
+        }
 
         /**
          * @brief Carga una textura desde un archivo y la aplica a la forma actual.
@@ -163,6 +164,77 @@ namespace ECS {
             if (!texturePath.empty()) {
                 render.SetTexture(texturePath);
             }
+            return render;
+        }
+
+        /**
+         * @brief Crea un "sprite": un rectangulo con una imagen aplicada,
+         * del tamaño que quieras verlo en pantalla.
+         *
+         * @details Por dentro sigue siendo un sf::RectangleShape (este
+         * proyecto no usa sf::Sprite), pero al mapear la textura sobre un
+         * rectangulo del tamaño exacto que pediste, se ve identico a un
+         * sprite comun. A diferencia de llamar a Make(RECTANGLE, ...,
+         * texturePath) a mano, esto evita dos errores tipicos:
+         * - El color queda en blanco (sin tenir), porque RenderSystem
+         *   vuelve a aplicar `fillColor` cada frame y en SFML el color de
+         *   relleno de una forma con textura la tiñe/multiplica.
+         * - El rectangulo se crea ya del tamaño que pediste (o del tamaño
+         *   real de la imagen si no indicas uno), en vez del {120, 70}
+         *   fijo de Make(), asi la imagen no sale estirada.
+         *
+         * El origen queda centrado, como en las demas formas, para que
+         * Transform::rotation (y el auto-orientado de SteeringSystem)
+         * roten el sprite desde su centro. El "frente" de tu imagen debe
+         * apuntar hacia la derecha (+X): asi coincide con el angulo 0
+         * que usa el steering.
+         *
+         * @param texturePath Ruta de la imagen (png, jpg, bmp, etc).
+         * @param displaySize Tamaño en pixeles con el que se dibuja el
+         * sprite. Si se deja en {0, 0}, se usa el tamaño real de la
+         * imagen (1 pixel de imagen = 1 pixel en pantalla).
+         * @return Un Render con el sprite listo, o uno vacio (sin forma,
+         * por lo que RenderSystem simplemente no dibuja nada) si la
+         * imagen no se pudo cargar.
+         */
+        [[nodiscard]] static Render MakeSprite(
+            const std::string& texturePath,
+            sf::Vector2f displaySize = { 0.f, 0.f }) {
+            auto loadedTexture = std::make_shared<sf::Texture>();
+            if (!loadedTexture->loadFromFile(texturePath)) {
+                // No se pudo cargar la imagen: en vez de no dibujar nada
+                // (invisible, imposible de diagnosticar a simple vista),
+                // devolvemos un rectangulo magenta bien feo -la
+                // convencion clasica de "textura faltante"- del tamaño
+                // pedido. Si ves esto en pantalla, la ruta esta mal o el
+                // archivo no esta ahi; no es un crash ni un bug de logica.
+                const sf::Vector2f fallbackSize =
+                    (displaySize.x > 0.f && displaySize.y > 0.f)
+                    ? displaySize
+                    : sf::Vector2f{ 40.f, 40.f };
+
+                auto fallbackShape =
+                    std::make_shared<sf::RectangleShape>(fallbackSize);
+                fallbackShape->setOrigin(fallbackSize / 2.f);
+
+                return Render{ fallbackShape, sf::Color(255, 0, 255) };
+            }
+
+            sf::Vector2f size = displaySize;
+            if (size.x <= 0.f || size.y <= 0.f) {
+                const sf::Vector2u textureSize = loadedTexture->getSize();
+                size = {
+                    static_cast<float>(textureSize.x),
+                    static_cast<float>(textureSize.y)
+                };
+            }
+
+            auto rectangle = std::make_shared<sf::RectangleShape>(size);
+            rectangle->setOrigin(size / 2.f);
+            rectangle->setTexture(loadedTexture.get(), true);
+
+            Render render{ rectangle, sf::Color::White };
+            render.texture = std::move(loadedTexture);
             return render;
         }
     };

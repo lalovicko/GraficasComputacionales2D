@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iomanip>
+#include <sstream>
 #include <SFML/Graphics.hpp>
 #include  "Prerequisitesr.h"
 #include "Core/Window.h"
@@ -48,7 +50,8 @@ namespace ECS
          */
         SimpleInspectorSystem(Window& windowReference)
             : window(windowReference)
-        {}
+        {
+        }
 
         /**
          * @brief Inicializa el sistema cargando la fuente de texto.
@@ -226,94 +229,67 @@ namespace ECS
                 renderWindow.getDefaultView()
             );
 
-            // Fondo del inspector.
+            const sf::Vector2u windowSize =
+                renderWindow.getSize();
+
+            // Panel chico y semi-transparente, pegado abajo a la
+            // izquierda para no taparle la pista al usuario.
+            constexpr float panelWidth = 235.f;
+            constexpr float panelHeight = 150.f;
+
             sf::RectangleShape panel(
-                { 350.f, 470.f }
+                { panelWidth, panelHeight }
             );
 
             panel.setPosition(
-                { 20.f, 20.f }
+                { 16.f, static_cast<float>(windowSize.y) - panelHeight - 16.f }
             );
 
             panel.setFillColor(
-                sf::Color(20, 22, 30, 235)
+                sf::Color(15, 16, 22, 165)
             );
 
             panel.setOutlineColor(
-                sf::Color(80, 180, 255)
+                sf::Color(255, 255, 255, 60)
             );
 
-            panel.setOutlineThickness(2.f);
+            panel.setOutlineThickness(1.f);
 
             renderWindow.draw(panel);
 
-            float x = 40.f;
-            float y = 35.f;
+            float x = panel.getPosition().x + 12.f;
+            float y = panel.getPosition().y + 8.f;
 
-            DrawText(
-                renderWindow,
-                "INSPECTOR ECS",
-                x,
-                y,
-                22,
-                sf::Color(80, 200, 255)
-            );
-
-            y += 35.f;
-
-            DrawText(
-                renderWindow,
-                "[Tab] Cambiar entidad",
-                x,
-                y,
-                14,
-                sf::Color::White
-            );
-
-            y += 20.f;
-
-            DrawText(
-                renderWindow,
-                "[I] Ocultar inspector",
-                x,
-                y,
-                14,
-                sf::Color::White
-            );
-
-            y += 35.f;
-
-            // Nombre de la entidad.
+            // Nombre de la entidad (hace de "titulo" del panel: menos
+            // texto fijo, mas informacion util de una).
             InspectorName* name =
                 registry.TryGetComponent<
                 InspectorName
                 >(entity);
 
-            if (name != nullptr)
-            {
-                DrawText(
-                    renderWindow,
-                    name->name,
-                    x,
-                    y,
-                    19,
-                    sf::Color(255, 220, 100)
-                );
-            }
-            else
-            {
-                DrawText(
-                    renderWindow,
-                    "Entity " +
-                    std::to_string(entity),
-                    x,
-                    y,
-                    19,
-                    sf::Color(255, 220, 100)
-                );
-            }
+            DrawText(
+                renderWindow,
+                name != nullptr
+                ? name->name
+                : "Entity " + std::to_string(entity),
+                x,
+                y,
+                13,
+                sf::Color(255, 220, 100)
+            );
 
-            y += 35.f;
+            y += 18.f;
+
+            DrawText(
+                renderWindow,
+                "[Q] cambiar   [I] ocultar",
+                x,
+                y,
+                10,
+                sf::Color(160, 165, 175)
+            );
+
+            y += 20.f;
 
             // Componente Transform.
             Transform* transform =
@@ -325,42 +301,16 @@ namespace ECS
             {
                 DrawText(
                     renderWindow,
-                    "Transform",
+                    "Pos: (" +
+                    ToFixed(transform->position.x) + ", " +
+                    ToFixed(transform->position.y) + ")",
                     x,
                     y,
-                    17,
-                    sf::Color(80, 200, 255)
+                    12,
+                    sf::Color(210, 210, 215)
                 );
 
-                y += 25.f;
-
-                DrawText(
-                    renderWindow,
-                    "Position X: " +
-                    std::to_string(
-                        transform->position.x
-                    ),
-                    x + 10.f,
-                    y,
-                    14,
-                    sf::Color::White
-                );
-
-                y += 20.f;
-
-                DrawText(
-                    renderWindow,
-                    "Position Y: " +
-                    std::to_string(
-                        transform->position.y
-                    ),
-                    x + 10.f,
-                    y,
-                    14,
-                    sf::Color::White
-                );
-
-                y += 30.f;
+                y += 18.f;
             }
 
             // Componente Movement.
@@ -373,42 +323,15 @@ namespace ECS
             {
                 DrawText(
                     renderWindow,
-                    "Movement",
+                    "Vel max: " + ToFixed(movement->maxSpeed, 0) +
+                    "   Fuerza: " + ToFixed(movement->maxForce, 0),
                     x,
                     y,
-                    17,
-                    sf::Color(80, 200, 255)
+                    12,
+                    sf::Color(210, 210, 215)
                 );
 
-                y += 25.f;
-
-                DrawText(
-                    renderWindow,
-                    "Max Speed: " +
-                    std::to_string(
-                        movement->maxSpeed
-                    ),
-                    x + 10.f,
-                    y,
-                    14,
-                    sf::Color::White
-                );
-
-                y += 20.f;
-
-                DrawText(
-                    renderWindow,
-                    "Max Force: " +
-                    std::to_string(
-                        movement->maxForce
-                    ),
-                    x + 10.f,
-                    y,
-                    14,
-                    sf::Color::White
-                );
-
-                y += 30.f;
+                y += 18.f;
             }
 
             // Componente Steering Behavior.
@@ -421,57 +344,57 @@ namespace ECS
             {
                 DrawText(
                     renderWindow,
-                    "Steering Behavior",
+                    "Comportamiento: " +
+                    GetBehaviorName(steering->type),
                     x,
                     y,
-                    17,
+                    12,
                     sf::Color(80, 200, 255)
                 );
 
-                y += 25.f;
+                y += 18.f;
 
-                DrawText(
-                    renderWindow,
-                    "Behavior: " +
-                    GetBehaviorName(
-                        steering->type
-                    ),
-                    x + 10.f,
-                    y,
-                    14,
-                    sf::Color::White
-                );
-
-                y += 20.f;
-
-                DrawText(
-                    renderWindow,
-                    "Target Entity: " +
-                    std::to_string(
-                        steering->targetEntity
-                    ),
-                    x + 10.f,
-                    y,
-                    14,
-                    sf::Color::White
-                );
-
-                y += 20.f;
-
-                DrawText(
-                    renderWindow,
-                    steering->enabled
-                    ? "Enabled: true"
-                    : "Enabled: false",
-                    x + 10.f,
-                    y,
-                    14,
-                    sf::Color::White
-                );
+                if (steering->type == SteeringType::PathFollow)
+                {
+                    DrawText(
+                        renderWindow,
+                        "Vuelta " +
+                        std::to_string(steering->pathLapCount + 1) +
+                        "   Carril: " + ToFixed(steering->laneOffset, 0),
+                        x,
+                        y,
+                        12,
+                        sf::Color(210, 210, 215)
+                    );
+                }
+                else
+                {
+                    DrawText(
+                        renderWindow,
+                        "Objetivo: " +
+                        std::to_string(steering->targetEntity),
+                        x,
+                        y,
+                        12,
+                        sf::Color(210, 210, 215)
+                    );
+                }
             }
 
             // Regresamos a la cámara del juego.
             renderWindow.setView(previousView);
+        }
+
+        /**
+         * @brief Redondea un float a `decimals` decimales y lo devuelve
+         * como string, en vez de los ~6 decimales de std::to_string.
+         */
+        std::string ToFixed(float value, int decimals = 1)
+        {
+            std::ostringstream stream;
+            stream.precision(decimals);
+            stream << std::fixed << value;
+            return stream.str();
         }
 
         /**
@@ -498,6 +421,16 @@ namespace ECS
             if (type == SteeringType::Arrive)
             {
                 return "Arrive";
+            }
+
+            if (type == SteeringType::PathFollow)
+            {
+                return "PathFollow";
+            }
+
+            if (type == SteeringType::Follow)
+            {
+                return "Follow";
             }
 
             return "Unknown";

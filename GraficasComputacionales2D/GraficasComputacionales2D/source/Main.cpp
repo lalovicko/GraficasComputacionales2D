@@ -1,22 +1,31 @@
 /**
  * @file main.cpp
- * @brief Punto de entrada de la demo de Steering Behaviors.
+ * @brief Punto de entrada: pista + carrera con Path Following, leaderboard
+ * y camara que sigue al que va primero.
  *
  * @details Crea una ventana, registra los sistemas del ECS (Steering, Camera,
- * Render e Inspector) y arma una escena con:
- * - Un "Objetivo" controlado manualmente con las teclas W/A/S/D.
- * - Una entidad con comportamiento Seek, que persigue al objetivo.
- * - Una entidad con comportamiento Flee, que huye del objetivo.
- * - Una entidad con comportamiento Arrive, que se acerca y frena cerca del objetivo.
- * - Una camara que sigue al objetivo.
+ * PathRender, Render, Leaderboard e Inspector) y arma una carrera con:
+ * - Una pista (componente Path) con curvas redondeadas y una chicana en S.
+ * - Varios "corredores" (RacerConfig) que NO se persiguen entre si: cada uno
+ *   sigue la pista de forma independiente con PathFollow (inspirado en
+ *   https://natureofcode.com/autonomous-agents/#path-following), con su
+ *   propia velocidad y su propio "carril" (laneOffset, un desplazamiento
+ *   lateral fijo respecto al centro de la pista). Asi el auto mas rapido
+ *   naturalmente alcanza y rebasa a uno mas lento, sin necesitar logica de
+ *   colisiones ni de adelantamiento explicita.
+ * - Un RaceLeaderboardSystem que ordena a los corredores por vueltas y
+ *   progreso sobre la pista, dibuja la tabla de posiciones (arriba a la
+ *   derecha) y mueve la camara para que siga siempre al que va primero.
  *
- * El bucle principal procesa los eventos de la ventana, mueve al objetivo
- * segun el teclado, actualiza todos los sistemas del ECS y presenta el frame.
+ * El bucle principal procesa los eventos de la ventana, actualiza todos los
+ * sistemas del ECS y presenta el frame. Toda la escena (pista + corredores)
+ * se arma UNA sola vez antes del bucle.
  */
 
 #include "Prerequisitesr.h"
 #include "Core/Window.h"
-
+#include "ECS/Components/Path.h"
+#include "ECS/Systems/PathRenderSystem.h"
 #include "ECS/Registry.h"
 
  // Componentes
@@ -29,12 +38,28 @@
 
 // Sistemas
 #include "ECS/Systems/CameraSystem.h"
+#include "ECS/Systems/RaceLeaderboardSystem.h"
 #include "ECS/Systems/RenderSystem.h"
 #include "ECS/Systems/SimpleInspectorSystem.h"
 #include "ECS/Systems/SteeringSystem.h"
 
+namespace
+{
+    /// Configuracion de un corredor: que imagen usa, de que color se tine,
+    /// que tan rapido es y en que "carril" corre.
+    struct RacerConfig
+    {
+        std::string name;
+        std::string texturePath;
+        sf::Color tint;
+        float maxSpeed;
+        float maxForce;
+        float laneOffset;
+    };
+}
+
 /**
- * @brief Arma la escena de la demo y ejecuta el bucle principal del juego.
+ * @brief Arma la carrera y ejecuta el bucle principal del juego.
  *
  * @return Codigo de salida del programa (0 en una terminacion normal).
  */
@@ -43,160 +68,193 @@ int main()
     Window window(
         800,
         600,
-        "Steering Behaviors"
+        "Steering Behaviors - Path Following"
     );
 
     ECS::Registry registry;
 
     // --- Registro de sistemas ---
     // El orden de registro importa: Steering calcula las fuerzas de
-    // movimiento antes de que Camera y Render usen la posicion resultante;
-    // el Inspector se registra al final para dibujarse encima de todo lo demas.
+    // movimiento antes de que Camera y Render usen la posicion resultante.
+    // PathRender dibuja la pista antes que los autos, Render dibuja los
+    // autos, Leaderboard calcula posiciones y mueve la camara al primer
+    // lugar, y el Inspector se registra al final para dibujarse encima
+    // de todo lo demas.
     registry.AddSystem<ECS::SteeringSystem>();
     registry.AddSystem<ECS::CameraSystem>(window);
+    registry.AddSystem<ECS::PathRenderSystem>(window);
     registry.AddSystem<ECS::RenderSystem>(window);
+    registry.AddSystem<ECS::RaceLeaderboardSystem>(window);
     registry.AddSystem<ECS::SimpleInspectorSystem>(window);
 
-    // NOTA: esta linea registra el mismo sistema (SimpleInspectorSystem) por
-    // segunda vez. Si no es intencional, se puede quitar sin afectar el resto.
-    registry.AddSystem<ECS::SimpleInspectorSystem>(window);
-
-    // --- Entidad "Objetivo": el punto que el jugador mueve manualmente ---
-    const ECS::EntityID player =
+    // --- Pista ---
+    // Se crea UNA sola vez, antes del bucle (nunca dentro del
+    // while(window.isOpen())).
+    //
+    // Un rectangulo con las 4 esquinas redondeadas (varios puntos por
+    // esquina, en vez de un solo vertice filoso) mas una "S" suave de un
+    // solo lado. Sigue siendo una simple lista de puntos -no hay curvas
+    // de verdad ni codigo nuevo-, pero al usar hartos puntos con giros
+    // chiquitos entre si, se ve como una curva prolija en vez de cortada.
+    const ECS::EntityID trackEntity =
         registry.CreateEntity();
 
-    registry.AddComponent<ECS::InspectorName>(
-        player,
-        "Objetivo"
-    );
+    ECS::Path& track =
+        registry.AddComponent<ECS::Path>(
+            trackEntity
+        );
 
-    registry.AddComponent<ECS::Transform>(
-        player,
-        sf::Vector2f{ 0.f, 0.f }
-    );
+    // Pista ancha, para que quepan varios carriles (laneOffset) uno al
+    // lado del otro sin que nadie se salga del asfalto.
+    track.radius = 85.f;
+    track.closed = true;
 
-    registry.AddComponent<ECS::Render>(
-        player,
-        ECS::Render::Make(
-            CIRCLE,
-            sf::Color(100, 250, 50)
-        )
-    );
+    track.points =
+    {
+        {   -290.0f,   -300.0f },
+        {    290.0f,   -300.0f },
+        {    330.2f,   -293.6f },
+        {    366.4f,   -275.2f },
+        {    395.2f,   -246.4f },
+        {    413.6f,   -210.2f },
+        {    420.0f,   -170.0f },
+        {    419.4f,   -158.3f },
+        {    417.7f,   -146.6f },
+        {    415.2f,   -134.8f },
+        {    412.0f,   -123.1f },
+        {    408.6f,   -111.4f },
+        {    405.4f,    -99.7f },
+        {    402.8f,    -87.9f },
+        {    401.2f,    -76.2f },
+        {    400.8f,    -64.5f },
+        {    401.7f,    -52.8f },
+        {    404.0f,    -41.0f },
+        {    407.6f,    -29.3f },
+        {    412.1f,    -17.6f },
+        {    417.3f,     -5.9f },
+        {    422.7f,      5.9f },
+        {    427.9f,     17.6f },
+        {    432.4f,     29.3f },
+        {    436.0f,     41.0f },
+        {    438.3f,     52.8f },
+        {    439.2f,     64.5f },
+        {    438.8f,     76.2f },
+        {    437.2f,     87.9f },
+        {    434.6f,     99.7f },
+        {    431.4f,    111.4f },
+        {    428.0f,    123.1f },
+        {    424.8f,    134.8f },
+        {    422.3f,    146.6f },
+        {    420.6f,    158.3f },
+        {    420.0f,    170.0f },
+        {    413.6f,    210.2f },
+        {    395.2f,    246.4f },
+        {    366.4f,    275.2f },
+        {    330.2f,    293.6f },
+        {    290.0f,    300.0f },
+        {   -290.0f,    300.0f },
+        {   -330.2f,    293.6f },
+        {   -366.4f,    275.2f },
+        {   -395.2f,    246.4f },
+        {   -413.6f,    210.2f },
+        {   -420.0f,    170.0f },
+        {   -420.0f,   -170.0f },
+        {   -413.6f,   -210.2f },
+        {   -395.2f,   -246.4f },
+        {   -366.4f,   -275.2f },
+        {   -330.2f,   -293.6f }
+    };
 
-    // Hacer el objetivo más pequeño
-    registry.GetComponent<ECS::Transform>(
-        player
-    ).scale = { 0.45f, 0.45f };
+    // --- Corredores ---
+    // Ahora si: cada uno en su propio "carril" (laneOffset), asi que el
+    // mas rapido rebasa de lado, no encimado. Probe esta combinacion en
+    // una simulacion en Python antes de pasarla aca: los 4 se quedan
+    // comodos dentro de la pista (radius=85) en la parte mas cerrada de
+    // la chicana.
+    //
+    // OJO -detalle raro pero real de ESTA pista-: la chicana no es
+    // simetrica, asi que un carril "hacia un lado" (offset negativo) se
+    // sale de la pista mucho mas facil que uno "hacia el otro lado"
+    // (offset positivo), aunque el desplazamiento sea igual de chico. Por
+    // eso los 4 carriles de aca son todos positivos: es el lado que la
+    // pista aguanta bien. Si en algun momento quieren carriles negativos
+    // tambien, hay que suavizar mas la chicana o bajarles la velocidad.
+    //
+    // El tinte de color (sf::Color) MULTIPLICA los colores de la imagen;
+    // sobre un sprite oscuro como Coche1/Coche2 apenas se nota. Si mas
+    // adelante quieren autos de colores bien distintos, conviene que la
+    // imagen base sea blanca o gris clara.
+    const std::vector<RacerConfig> racers =
+    {
+        { "Auto 1", "assets/sprites/Coche1.png", sf::Color::White,          205.f, 605.f,  5.f },
+        { "Auto 2", "assets/sprites/Coche2.png", sf::Color(210, 225, 255),  215.f, 635.f, 18.f },
+        { "Auto 3", "assets/sprites/Coche1.png", sf::Color(255, 225, 200),  225.f, 665.f, 31.f },
+        { "Auto 4", "assets/sprites/Coche2.png", sf::Color(210, 255, 220),  235.f, 695.f, 44.f }
+    };
 
-    // --- Entidad con comportamiento Seek: persigue al objetivo ---
-    const ECS::EntityID triangle =
-        registry.CreateEntity();
+    // Le damos a la camara un objetivo valido desde el primer frame; el
+    // RaceLeaderboardSystem lo va a ir actualizando solo al que vaya
+    // primero en cada vuelta.
+    ECS::EntityID firstRacer = ECS::NULL_ENTITY;
 
-    registry.AddComponent<ECS::InspectorName>(
-        triangle,
-        "Entidad Seek"
-    );
+    for (std::size_t i = 0; i < racers.size(); ++i)
+    {
+        const RacerConfig& config = racers[i];
 
-    registry.AddComponent<ECS::Transform>(
-        triangle,
-        sf::Vector2f{ 220.f, 100.f }
-    );
+        const ECS::EntityID racer =
+            registry.CreateEntity();
 
-    registry.AddComponent<ECS::Render>(
-        triangle,
-        ECS::Render::Make(
-            TRIANGLE,
-            sf::Color::Cyan
-        )
-    );
+        if (i == 0)
+        {
+            firstRacer = racer;
+        }
 
-    registry.AddComponent<ECS::Movement>(
-        triangle,
-        170.f, // Velocidad máxima
-        350.f  // Fuerza máxima
-    );
+        registry.AddComponent<ECS::InspectorName>(
+            racer,
+            config.name
+        );
 
-    registry.AddComponent<ECS::SteeringBehavior>(
-        triangle,
-        ECS::SteeringType::Seek,
-        player
-    );
+        // Todos arrancan juntos en la linea de salida (como en una
+        // carrera de verdad) y se acomodan en su carril apenas arranca
+        // la simulacion.
+        registry.AddComponent<ECS::Transform>(
+            racer,
+            track.points.front()
+        );
 
-    // --- Entidad con comportamiento Flee: huye del objetivo ---
-    const ECS::EntityID rectangle =
-        registry.CreateEntity();
+        auto& render =
+            registry.AddComponent<ECS::Render>(
+                racer,
+                ECS::Render::MakeSprite(
+                    config.texturePath,
+                    { 60.f, 22.f }
+                )
+            );
 
-    registry.AddComponent<ECS::InspectorName>(
-        rectangle,
-        "Entidad Flee"
-    );
+        render.fillColor = config.tint;
 
-    registry.AddComponent<ECS::Transform>(
-        rectangle,
-        sf::Vector2f{ -220.f, 110.f }
-    );
+        registry.AddComponent<ECS::Movement>(
+            racer,
+            config.maxSpeed,
+            config.maxForce
+        );
 
-    registry.AddComponent<ECS::Render>(
-        rectangle,
-        ECS::Render::Make(
-            RECTANGLE,
-            sf::Color(255, 210, 70)
-        )
-    );
+        auto& steering =
+            registry.AddComponent<ECS::SteeringBehavior>(
+                racer,
+                ECS::SteeringType::PathFollow,
+                trackEntity
+            );
 
-    registry.AddComponent<ECS::Movement>(
-        rectangle,
-        140.f,
-        300.f
-    );
+        // Que tan lejos "mira" el auto sobre la pista. Mas chico = pega
+        // mas a su carril; mas grande = curvas mas suaves pero cortando
+        // un poco mas las esquinas.
+        steering.pathPredictDistance = 55.f;
+        steering.laneOffset = config.laneOffset;
+    }
 
-    registry.AddComponent<ECS::SteeringBehavior>(
-        rectangle,
-        ECS::SteeringType::Flee,
-        player
-    );
-
-    // --- Entidad con comportamiento Arrive: se acerca y frena cerca del objetivo ---
-    const ECS::EntityID arrive =
-        registry.CreateEntity();
-
-    registry.AddComponent<ECS::InspectorName>(
-        arrive,
-        "Entidad Arrive"
-    );
-
-    registry.AddComponent<ECS::Transform>(
-        arrive,
-        sf::Vector2f{ 0.f, -230.f }
-    );
-
-    registry.AddComponent<ECS::Render>(
-        arrive,
-        ECS::Render::Make(
-            CIRCLE,
-            sf::Color(80, 140, 255)
-        )
-    );
-
-    registry.GetComponent<ECS::Transform>(
-        arrive
-    ).scale = { 0.55f, 0.55f };
-
-    registry.AddComponent<ECS::Movement>(
-        arrive,
-        180.f,
-        330.f
-    );
-
-    registry.AddComponent<ECS::SteeringBehavior>(
-        arrive,
-        ECS::SteeringType::Arrive,
-        player,
-        180.f, // Radio para comenzar a frenar
-        15.f   // Radio para detenerse
-    );
-
-    // --- Entidad "Camara": sigue al objetivo ---
+    // --- Entidad "Camara": arranca en el primer corredor; despues la
+    // controla el RaceLeaderboardSystem (sigue siempre al que va primero) ---
     const ECS::EntityID cameraEntity =
         registry.CreateEntity();
 
@@ -215,9 +273,9 @@ int main()
             cameraEntity
         );
 
-    camera.followTarget = player;
-    camera.followSpeed = 5.f;
-    camera.zoom = 1.f;
+    camera.followTarget = firstRacer;
+    camera.followSpeed = 4.f;
+    camera.zoom = 0.65f; // Alejada para que se note el trazado completo.
 
     sf::Clock frameClock;
 
@@ -245,72 +303,6 @@ int main()
 
         const float deltaTime =
             frameClock.restart().asSeconds();
-
-        // Movimiento manual del objetivo
-        auto& playerTransform =
-            registry.GetComponent<ECS::Transform>(
-                player
-            );
-
-        sf::Vector2f direction{ 0.f, 0.f };
-
-        if (
-            sf::Keyboard::isKeyPressed(
-                sf::Keyboard::Key::W
-            )
-            )
-        {
-            direction.y -= 1.f;
-        }
-
-        if (
-            sf::Keyboard::isKeyPressed(
-                sf::Keyboard::Key::S
-            )
-            )
-        {
-            direction.y += 1.f;
-        }
-
-        if (
-            sf::Keyboard::isKeyPressed(
-                sf::Keyboard::Key::A
-            )
-            )
-        {
-            direction.x -= 1.f;
-        }
-
-        if (
-            sf::Keyboard::isKeyPressed(
-                sf::Keyboard::Key::D
-            )
-            )
-        {
-            direction.x += 1.f;
-        }
-
-        // Normalizamos la direccion para que el movimiento diagonal no sea
-        // mas rapido que el movimiento en un solo eje.
-        float length = std::sqrt(
-            direction.x * direction.x +
-            direction.y * direction.y
-        );
-
-        if (length > 0.f)
-        {
-            direction.x /= length;
-            direction.y /= length;
-
-            float speed = 230.f;
-
-            playerTransform.Translate(
-                {
-                    direction.x * speed * deltaTime,
-                    direction.y * speed * deltaTime
-                }
-            );
-        }
 
         window.clear(sf::Color::Black);
 

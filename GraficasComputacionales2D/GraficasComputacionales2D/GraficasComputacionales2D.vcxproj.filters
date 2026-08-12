@@ -89,16 +89,25 @@
     <ClInclude Include="..\include\ECS\Components\Movement.h">
       <Filter>Header Files\ECS\Components</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\ECS\Components\SteeringBehavior.h">
-      <Filter>Header Files\ECS\Components</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\ECS\Systems\SteeringSystem.h">
-      <Filter>Header Files\ECS\Systems</Filter>
-    </ClInclude>
     <ClInclude Include="include\ECS\Components\InspectorName.h">
       <Filter>Header Files\ECS\Components</Filter>
     </ClInclude>
     <ClInclude Include="include\ECS\Systems\SimpleInspectorSystem.h">
+      <Filter>Header Files\ECS\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Components\Path.h">
+      <Filter>Header Files\ECS\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Systems\PathRenderSystem.h">
+      <Filter>Header Files\ECS\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Systems\SteeringSystem.h">
+      <Filter>Header Files\ECS\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Components\SteeringBehavior.h">
+      <Filter>Header Files\ECS\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ECS\Systems\RaceLeaderBoardSystem.h">
       <Filter>Header Files\ECS\Systems</Filter>
     </ClInclude>
   </ItemGroup>
